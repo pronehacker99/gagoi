@@ -1477,7 +1477,8 @@ end
 do
     local WatermarkBackground = Library:MakeOutline(ScreenGui, Library.CornerRadius, 10)
     WatermarkBackground.AutomaticSize = Enum.AutomaticSize.Y
-    WatermarkBackground.Position = UDim2.fromOffset(6, 6)
+    WatermarkBackground.Position = UDim2.new(0.5, 0, 0, -30) -- Top center
+    WatermarkBackground.AnchorPoint = Vector2.new(0.5, 0)
     WatermarkBackground.Size = UDim2.fromOffset(0, 0)
     WatermarkBackground.Visible = false
 
@@ -1845,18 +1846,6 @@ do
             Info.Mode = "Toggle"
         end
 
-        local SpecialKeys = {
-            ["MB1"] = Enum.UserInputType.MouseButton1,
-            ["MB2"] = Enum.UserInputType.MouseButton2,
-            ["MB3"] = Enum.UserInputType.MouseButton3
-        }
-
-        local SpecialKeysInput = {
-            [Enum.UserInputType.MouseButton1] = "MB1",
-            [Enum.UserInputType.MouseButton2] = "MB2",
-            [Enum.UserInputType.MouseButton3] = "MB3"
-        }
-
         local Picker = New("TextButton", {
             BackgroundColor3 = "MainColor",
             BorderColor3 = "OutlineColor",
@@ -2057,11 +2046,13 @@ do
                     return false
                 end
 
-                if SpecialKeys[Key] ~= nil then
-                    return UserInputService:IsMouseButtonPressed(SpecialKeys[Key]) and not UserInputService:GetFocusedTextBox();
-                else
-                    return UserInputService:IsKeyDown(Enum.KeyCode[Key]) and not UserInputService:GetFocusedTextBox();
-                end;
+                if Key == "MB1" or Key == "MB2" then
+                    return Key == "MB1" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+                        or Key == "MB2" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+                end
+
+                return UserInputService:IsKeyDown(Enum.KeyCode[KeyPicker.Value])
+                    and not UserInputService:GetFocusedTextBox()
             else
                 return KeyPicker.Toggled
             end
@@ -2114,11 +2105,12 @@ do
             local Input = UserInputService.InputBegan:Wait()
             local Key = "Unknown"
 
-            if SpecialKeysInput[Input.UserInputType] ~= nil then
-                Key = SpecialKeysInput[Input.UserInputType];
-
-            elseif Input.UserInputType == Enum.UserInputType.Keyboard then
+            if Input.UserInputType == Enum.UserInputType.Keyboard then
                 Key = Input.KeyCode == Enum.KeyCode.Escape and "None" or Input.KeyCode.Name
+            elseif Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                Key = "MB1"
+            elseif Input.UserInputType == Enum.UserInputType.MouseButton2 then
+                Key = "MB2"
             end
 
             KeyPicker.Value = Key
@@ -2152,10 +2144,14 @@ do
             if KeyPicker.Mode == "Toggle" then
                 local Key = KeyPicker.Value
 
-                if SpecialKeysInput[Input.UserInputType] == Key then
-                    KeyPicker.Toggled = not KeyPicker.Toggled
-                    KeyPicker:DoClick()
-                    
+                if Key == "MB1" or Key == "MB2" then
+                    if
+                        Key == "MB1" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+                        or Key == "MB2" and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+                    then
+                        KeyPicker.Toggled = not KeyPicker.Toggled
+                        KeyPicker:DoClick()
+                    end
                 elseif Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode.Name == Key then
                     KeyPicker.Toggled = not KeyPicker.Toggled
                     KeyPicker:DoClick()
@@ -5569,13 +5565,11 @@ function Library:CreateWindow(WindowInfo)
         local TabContainer
         local TabLeft
         local TabRight
-		
+
         local WarningBox
-        local WarningBoxScrollingFrame
         local WarningTitle
         local WarningText
         local WarningStroke
-        local WarningBoxLockSize = false
 
         Icon = Library:GetIcon(Icon)
         do
@@ -5683,7 +5677,6 @@ function Library:CreateWindow(WindowInfo)
                 Library:UpdateDPI(TabRight, { Size = TabRight.Size })
             end
 
-            --// Warning Box \\--
             WarningBox = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundColor3 = Color3.fromRGB(127, 0, 0),
@@ -5695,24 +5688,12 @@ function Library:CreateWindow(WindowInfo)
                 Visible = false,
                 Parent = TabContainer,
             })
-
-            WarningBoxScrollingFrame = New("ScrollingFrame", {
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                AnchorPoint = Vector2.new(0.5, 0.5),
-                Position = UDim2.new(0.5, 0, 0.5, -3),
-                Size = UDim2.new(1, 0, 1, -3),
-                CanvasSize = UDim2.new(0, 0, 0, 0),
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                ScrollBarThickness = 3,
-                Parent = WarningBox,
-            })
             New("UIPadding", {
                 PaddingBottom = UDim.new(0, 4),
                 PaddingLeft = UDim.new(0, 6),
                 PaddingRight = UDim.new(0, 6),
                 PaddingTop = UDim.new(0, 4),
-                Parent = WarningBoxScrollingFrame,
+                Parent = WarningBox,
             })
 
             WarningTitle = New("TextLabel", {
@@ -5722,7 +5703,7 @@ function Library:CreateWindow(WindowInfo)
                 TextColor3 = Color3.fromRGB(255, 50, 50),
                 TextSize = 14,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = WarningBoxScrollingFrame,
+                Parent = WarningBox,
             })
             WarningStroke = New("UIStroke", {
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
@@ -5734,13 +5715,12 @@ function Library:CreateWindow(WindowInfo)
             WarningText = New("TextLabel", {
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(0, 16),
-                Size = UDim2.new(1, 0, 1, -14),
+                Size = UDim2.fromScale(1, 0),
                 Text = "",
                 TextSize = 14,
-                TextWrapped = true,
-                Parent = WarningBoxScrollingFrame,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                TextYAlignment = Enum.TextYAlignment.Top,
+                TextWrapped = true,
+                Parent = WarningBox,
             })
             New("UIStroke", {
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
@@ -5762,14 +5742,9 @@ function Library:CreateWindow(WindowInfo)
         }
 
         function Tab:UpdateWarningBox(Info)
-            if typeof(Info.LockSize) == "boolean" then
-                WarningBoxLockSize = Info.LockSize
-                Tab:Resize(true)
-            end
-
             if typeof(Info.Visible) == "boolean" then
                 WarningBox.Visible = Info.Visible
-                Tab:Resize(true)
+                Tab:Resize()
             end
 
             if typeof(Info.Title) == "string" then
@@ -5787,7 +5762,7 @@ function Library:CreateWindow(WindowInfo)
                 WarningText.Size = UDim2.new(1, 0, 0, Y)
                 WarningText.Text = Info.Text
                 Library:UpdateDPI(WarningText, { Size = WarningText.Size })
-                Tab:Resize(true)
+                Tab:Resize()
             end
 
             WarningBox.BackgroundColor3 = Info.IsNormal == true and Library.Scheme.BackgroundColor
@@ -5826,18 +5801,15 @@ function Library:CreateWindow(WindowInfo)
 
         function Tab:Resize(ResizeWarningBox: boolean?)
             if ResizeWarningBox then
-                local MaximumSize = math.floor(TabContainer.AbsoluteSize.Y / 3.25);
                 local _, Y = Library:GetTextBounds(
                     WarningText.Text,
                     Library.Scheme.Font,
                     WarningText.TextSize,
                     WarningText.AbsoluteSize.X
                 )
-				
-                if WarningBoxLockSize == true and Y >= MaximumSize then Y = MaximumSize; end
 
-                WarningBox.Size = UDim2.new(1, 0, 0, Y)
-                Library:UpdateDPI(WarningText, { Size = WarningBox.Size })
+                WarningText.Size = UDim2.new(1, 0, 0, Y)
+                Library:UpdateDPI(WarningText, { Size = WarningText.Size })
             end
 
             local Offset = WarningBox.Visible and WarningBox.AbsoluteSize.Y + 6 or 0
@@ -5875,6 +5847,7 @@ function Library:CreateWindow(WindowInfo)
             local GroupboxContainer
             local GroupboxList
 
+			--[[ MODIFIED BY GEMINI: This is the section that has been changed to support collapsing by default. ]]
             do
                 GroupboxHolder = New("Frame", {
                     BackgroundColor3 = "BackgroundColor",
@@ -5904,21 +5877,84 @@ function Library:CreateWindow(WindowInfo)
                     })
                 end
 
+                -- Create clickable header for collapsible functionality
+                local HeaderButton = New("TextButton", {
+                    BackgroundTransparency = 1,
+                    Position = UDim2.fromOffset(0, 0),
+                    Size = UDim2.new(1, 0, 0, 34),
+                    Text = "",
+                    Parent = GroupboxHolder,
+                })
+
+                -- If BoxIcon is present, create it at the far left of the header
+                if BoxIcon then
+                    New("ImageLabel", {
+                        Image = BoxIcon.Url,
+                        ImageColor3 = "AccentColor",
+                        ImageRectOffset = BoxIcon.ImageRectOffset,
+                        ImageRectSize = BoxIcon.ImageRectSize,
+                        Position = UDim2.fromOffset(8, 7),
+                        Size = UDim2.fromOffset(20, 20),
+                        Parent = HeaderButton,
+                        ZIndex = 2,
+                    })
+                end
+
                 GroupboxLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
-                    Size = UDim2.new(1, 0, 0, 34),
+                    Position = UDim2.fromOffset(0, 0),
+                    Size = UDim2.new(1, -52, 1, 0), -- Leave space for groupbox icon (22px) and chevron (20px) + margin
                     Text = Info.Name,
                     TextSize = 15,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = GroupboxHolder,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    Parent = HeaderButton,
+                    ZIndex = 1,
                 })
                 New("UIPadding", {
-                    PaddingLeft = UDim.new(0, 12),
-                    PaddingRight = UDim.new(0, 12),
+                    PaddingLeft = UDim.new(0, BoxIcon and 36 or 12), -- More left padding if icon present
+                    PaddingRight = UDim.new(0, 0),
                     Parent = GroupboxLabel,
                 })
 
+                -- Add dropdown chevron icon for collapsible state
+                local ChevronDownIcon = Library:GetIcon("chevron-down")
+                local ChevronLeftIcon = Library:GetIcon("chevron-left")
+                local ArrowIcon = New("ImageLabel", {
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(1, -20, 0.5, -10), -- Exactly at the right edge
+                    Size = UDim2.fromOffset(20, 20),
+                    Image = ChevronDownIcon and ChevronDownIcon.Url or "",
+                    ImageRectOffset = ChevronDownIcon and ChevronDownIcon.ImageRectOffset or Vector2.zero,
+                    ImageRectSize = ChevronDownIcon and ChevronDownIcon.ImageRectSize or Vector2.zero,
+                    ImageColor3 = "FontColor",
+                    ImageTransparency = 0.2,
+                    Parent = HeaderButton,
+                    ZIndex = 2,
+                })
+
+                -- Collapsible state
+                local IsCollapsed = true -- Forcing groupboxes to be collapsed by default
+
+                -- Helper to walk up and update all layouts
+                local function UpdateLayouts(instance)
+                    while instance do
+                        for _, child in ipairs(instance:GetChildren()) do
+                            if child:IsA("UIListLayout") then
+                                child:ApplyLayout()
+                            end
+                        end
+                        -- If it's a ScrollingFrame, update CanvasSize
+                        if instance:IsA("ScrollingFrame") then
+                            local layout = instance:FindFirstChildWhichIsA("UIListLayout")
+                            if layout then
+                                instance.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+                            end
+                        end
+                        instance = instance.Parent
+                    end
+                end
+                
                 GroupboxContainer = New("Frame", {
                     BackgroundTransparency = 1,
                     Position = UDim2.fromOffset(0, 35),
@@ -5937,28 +5973,60 @@ function Library:CreateWindow(WindowInfo)
                     PaddingTop = UDim.new(0, 7),
                     Parent = GroupboxContainer,
                 })
+                
+                local Groupbox = {
+                    BoxHolder = BoxHolder,
+                    Holder = Background,
+                    Container = GroupboxContainer,
+
+                    Tab = Tab,
+                    DependencyBoxes = {},
+                    Elements = {},
+                }
+
+                function Groupbox:Resize()
+                    if IsCollapsed then
+                        Background.Size = UDim2.new(1, 0, 0, 36 * (Library.DPIScale or 1))
+                    else
+                        Background.Size = UDim2.new(1, 0, 0, GroupboxList.AbsoluteContentSize.Y + 53 * (Library.DPIScale or 1))
+                    end
+                end
+
+                -- Function to toggle collapse state
+                local function ToggleCollapse()
+                    IsCollapsed = not IsCollapsed
+                    if IsCollapsed then
+                        -- Collapse: hide content and set icon to chevron-left
+                        GroupboxContainer.Visible = false
+                        ArrowIcon.Image = ChevronLeftIcon and ChevronLeftIcon.Url or ""
+                        ArrowIcon.ImageRectOffset = ChevronLeftIcon and ChevronLeftIcon.ImageRectOffset or Vector2.zero
+                        ArrowIcon.ImageRectSize = ChevronLeftIcon and ChevronLeftIcon.ImageRectSize or Vector2.zero
+                    else
+                        -- Expand: show content and set icon to chevron-down
+                        GroupboxContainer.Visible = true
+                        ArrowIcon.Image = ChevronDownIcon and ChevronDownIcon.Url or ""
+                        ArrowIcon.ImageRectOffset = ChevronDownIcon and ChevronDownIcon.ImageRectOffset or Vector2.zero
+                        ArrowIcon.ImageRectSize = ChevronDownIcon and ChevronDownIcon.ImageRectSize or Vector2.zero
+                    end
+                    Groupbox:Resize()
+                    UpdateLayouts(BoxHolder)
+                end
+
+                -- Connect click event
+                HeaderButton.MouseButton1Click:Connect(ToggleCollapse)
+
+                -- Initialize the groupbox as collapsed by default
+                GroupboxContainer.Visible = false
+                ArrowIcon.Image = ChevronLeftIcon and ChevronLeftIcon.Url or ""
+                ArrowIcon.ImageRectOffset = ChevronLeftIcon and ChevronLeftIcon.ImageRectOffset or Vector2.zero
+                ArrowIcon.ImageRectSize = ChevronLeftIcon and ChevronLeftIcon.ImageRectSize or Vector2.zero
+
+                setmetatable(Groupbox, BaseGroupbox)
+                Groupbox:Resize()
+                Tab.Groupboxes[Info.Name] = Groupbox
+
+                return Groupbox
             end
-
-            local Groupbox = {
-                BoxHolder = BoxHolder,
-                Holder = Background,
-                Container = GroupboxContainer,
-
-                Tab = Tab,
-                DependencyBoxes = {},
-                Elements = {},
-            }
-
-            function Groupbox:Resize()
-                Background.Size = UDim2.new(1, 0, 0, GroupboxList.AbsoluteContentSize.Y + 53 * Library.DPIScale)
-            end
-
-            setmetatable(Groupbox, BaseGroupbox)
-
-            Groupbox:Resize()
-            Tab.Groupboxes[Info.Name] = Groupbox
-
-            return Groupbox
         end
 
         function Tab:AddLeftGroupbox(Name, IconName)
