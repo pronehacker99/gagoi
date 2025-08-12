@@ -1,5 +1,5 @@
 -- Change these
-local targetName = "PLAYER_NAME" -- target player name
+local targetName = "gardenkoyaneh" -- target player name
 local fruitName = "Carrot"       -- name of the fruit/item
 
 -- Get target player object
